@@ -10,6 +10,10 @@
 //                 Guillaume Rodriguez <https://github.com/guillaume-ro-fr>
 //                 Sergey Rubanov <https://github.com/chicoxyzzy>
 //                 Simon Archer <https://github.com/archy-bold>
+//                 Ken Elkabany <https://github.com/braincore>
+//                 Slavik Nychkalo <https://github.com/gebeto>
+//                 Francesco Benedetto <https://github.com/frabnt>
+//                 Alexandros Dorodoulis <https://github.com/alexdor>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // TypeScript Version: 2.3
 
@@ -32,10 +36,12 @@ declare class Chart {
     getElementAtEvent: (e: any) => {};
     getElementsAtEvent: (e: any) => Array<{}>;
     getDatasetAtEvent: (e: any) => Array<{}>;
-    ctx: CanvasRenderingContext2D|null;
-    canvas: HTMLCanvasElement|null;
+    getDatasetMeta: (index: number) => Meta;
+    ctx: CanvasRenderingContext2D | null;
+    canvas: HTMLCanvasElement | null;
     chartArea: Chart.ChartArea;
     static pluginService: PluginServiceStatic;
+    static plugins: PluginServiceStatic;
 
     static defaults: {
         global: Chart.ChartOptions & Chart.ChartFontOptions;
@@ -43,6 +49,10 @@ declare class Chart {
     };
 
     static controllers: {
+        [key: string]: any;
+    };
+
+    static helpers: {
         [key: string]: any;
     };
 
@@ -55,49 +65,86 @@ declare class PluginServiceStatic {
 }
 
 interface PluginServiceRegistrationOptions {
-    beforeInit?(chartInstance: Chart): void;
-    afterInit?(chartInstance: Chart): void;
+    beforeInit?(chartInstance: Chart, options?: any): void;
+    afterInit?(chartInstance: Chart, options?: any): void;
 
-    resize?(chartInstance: Chart, newChartSize: Size): void;
+    resize?(chartInstance: Chart, newChartSize: Chart.ChartSize, options?: any): void;
 
-    beforeUpdate?(chartInstance: Chart): void;
-    afterScaleUpdate?(chartInstance: Chart): void;
-    beforeDatasetsUpdate?(chartInstance: Chart): void;
-    afterDatasetsUpdate?(chartInstance: Chart): void;
-    afterUpdate?(chartInstance: Chart): void;
+    beforeUpdate?(chartInstance: Chart, options?: any): void;
+    afterScaleUpdate?(chartInstance: Chart, options?: any): void;
+    beforeDatasetsUpdate?(chartInstance: Chart, options?: any): void;
+    afterDatasetsUpdate?(chartInstance: Chart, options?: any): void;
+    afterUpdate?(chartInstance: Chart, options?: any): void;
 
     // This is called at the start of a render. It is only called once, even if the animation will run for a number of frames. Use beforeDraw or afterDraw
     // to do something on each animation frame
-    beforeRender?(chartInstance: Chart): void;
+    beforeRender?(chartInstance: Chart, options?: any): void;
 
     // Easing is for animation
-    beforeDraw?(chartInstance: Chart, easing: string): void;
-    afterDraw?(chartInstance: Chart, easing: string): void;
+    beforeDraw?(chartInstance: Chart, easing: string, options?: any): void;
+    afterDraw?(chartInstance: Chart, easing: string, options?: any): void;
     // Before the datasets are drawn but after scales are drawn
-    beforeDatasetsDraw?(chartInstance: Chart, easing: string): void;
-    afterDatasetsDraw?(chartInstance: Chart, easing: string): void;
+    beforeDatasetsDraw?(chartInstance: Chart, easing: string, options?: any): void;
+    afterDatasetsDraw?(chartInstance: Chart, easing: string, options?: any): void;
 
     // Called before drawing the `tooltip`. If any plugin returns `false`,
     // the tooltip drawing is cancelled until another `render` is triggered.
-    beforeTooltipDraw?(chartInstance: Chart): void;
+    beforeTooltipDraw?(chartInstance: Chart, tooltipData?: any, options?: any): void;
     // Called after drawing the `tooltip`. Note that this hook will not,
     // be called if the tooltip drawing has been previously cancelled.
-    afterTooltipDraw?(chartInstance: Chart): void;
+    afterTooltipDraw?(chartInstance: Chart, tooltipData?: any, options?: any): void;
 
     destroy?(chartInstance: Chart): void;
 
     // Called when an event occurs on the chart
-    beforeEvent?(chartInstance: Chart, event: Event): void;
-    afterEvent?(chartInstance: Chart, event: Event): void;
+    beforeEvent?(chartInstance: Chart, event: Event, options?: any): void;
+    afterEvent?(chartInstance: Chart, event: Event, options?: any): void;
 }
 
-interface Size {
-    height: number;
-    width: number;
+interface Meta {
+    type: Chart.ChartType;
+    data: MetaData[];
+    dataset?: Chart.ChartDataSets;
+    controller: { [key: string]: any; };
+    hidden?: boolean;
+    total?: string;
+    xAxisID?: string;
+    yAxisID?: string;
+    "$filler"?: { [key: string]: any; };
+}
+
+interface MetaData {
+    _chart: Chart;
+    _datasetIndex: number;
+    _index: number;
+    _model: Model;
+    _start?: any;
+    _view: Model;
+    _xScale: Chart.ChartScales;
+    _yScale: Chart.ChartScales;
+    hidden?: boolean;
+}
+
+interface Model {
+    backgroundColor: string;
+    borderColor: string;
+    borderWidth?: number;
+    controlPointNextX: number;
+    controlPointNextY: number;
+    controlPointPreviousX: number;
+    controlPointPreviousY: number;
+    hitRadius: number;
+    pointStyle: string;
+    radius: string;
+    skip?: boolean;
+    steppedLine?: undefined;
+    tension: number;
+    x: number;
+    y: number;
 }
 
 declare namespace Chart {
-    type ChartType = 'line' | 'bar' | 'radar' | 'doughnut' | 'polarArea' | 'bubble' | 'pie';
+    type ChartType = 'line' | 'bar' | 'horizontalBar' | 'radar' | 'doughnut' | 'polarArea' | 'bubble' | 'pie';
 
     type TimeUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
 
@@ -168,6 +215,7 @@ declare namespace Chart {
         x?: number | string | Date;
         y?: number | string | Date;
         r?: number;
+        t?: number | string | Date;
     }
 
     interface ChartConfiguration {
@@ -183,6 +231,15 @@ declare namespace Chart {
         datasets?: ChartDataSets[];
     }
 
+	interface RadialChartOptions extends ChartOptions {
+		scale?: RadialLinearScale;
+	}
+
+    interface ChartSize {
+        height: number;
+        width: number;
+    }
+
     interface ChartOptions {
         responsive?: boolean;
         responsiveAnimationDuration?: number;
@@ -191,6 +248,7 @@ declare namespace Chart {
         events?: string[];
         onHover?(this: Chart, event: MouseEvent, activeElements: Array<{}>): any;
         onClick?(event?: MouseEvent, activeElements?: Array<{}>): any;
+        onResize?(this: Chart, newSize: ChartSize): void;
         title?: ChartTitleOptions;
         legend?: ChartLegendOptions;
         tooltips?: ChartTooltipOptions;
@@ -219,7 +277,7 @@ declare namespace Chart {
     interface ChartTitleOptions {
         display?: boolean;
         position?: PositionType;
-        fullWdith?: boolean;
+        fullWidth?: boolean;
         fontSize?: number;
         fontFamily?: string;
         fontColor?: ChartColor;
@@ -289,7 +347,7 @@ declare namespace Chart {
     }
 
     interface ChartTooltipsStaticConfiguration {
-        positioners: {[mode: string]: ChartTooltipPositioner};
+        positioners: { [mode: string]: ChartTooltipPositioner };
     }
 
     type ChartTooltipPositioner = (elements: any[], eventPosition: Point) => Point;
@@ -363,14 +421,14 @@ declare namespace Chart {
     }
 
     interface ChartLayoutOptions {
-      padding?: ChartLayoutPaddingObject | number;
+        padding?: ChartLayoutPaddingObject | number;
     }
 
     interface ChartLayoutPaddingObject {
-      top?: number;
-      right?: number;
-      bottom?: number;
-      left?: number;
+        top?: number;
+        right?: number;
+        bottom?: number;
+        left?: number;
     }
 
     interface GridLineOptions {
@@ -406,7 +464,7 @@ declare namespace Chart {
         backdropPaddingX?: number;
         backdropPaddingY?: number;
         beginAtZero?: boolean;
-        callback?(value: any, index: any, values: any): string|number;
+        callback?(value: any, index: any, values: any): string | number;
         display?: boolean;
         fontColor?: ChartColor;
         fontFamily?: string;
@@ -422,6 +480,7 @@ declare namespace Chart {
         padding?: number;
         reverse?: boolean;
         showLabelBackdrop?: boolean;
+        source?: 'auto' | 'data' | 'labels';
     }
 
     interface AngleLineOptions {
@@ -478,7 +537,7 @@ declare namespace Chart {
         pointHoverBackgroundColor?: ChartColor | ChartColor[];
         pointHoverBorderColor?: ChartColor | ChartColor[];
         pointHoverBorderWidth?: number | number[];
-        pointStyle?: PointStyle | HTMLImageElement | Array<PointStyle | HTMLImageElement>;
+        pointStyle?: PointStyle | HTMLImageElement | HTMLCanvasElement | Array<PointStyle | HTMLImageElement | HTMLCanvasElement>;
         xAxisID?: string;
         yAxisID?: string;
         type?: string;
@@ -501,6 +560,7 @@ declare namespace Chart {
     }
 
     interface CommonAxe {
+        bounds?: string;
         type?: ScaleType | string;
         display?: boolean;
         id?: string;
@@ -509,7 +569,10 @@ declare namespace Chart {
         ticks?: TickOptions;
         gridLines?: GridLineOptions;
         barThickness?: number;
+        maxBarThickness?: number;
         scaleLabel?: ScaleTitleOptions;
+        time?: TimeScale;
+        offset?: boolean;
         beforeUpdate?(scale?: any): void;
         beforeSetDimension?(scale?: any): void;
         beforeDataLimits?(scale?: any): void;
@@ -529,7 +592,7 @@ declare namespace Chart {
     interface ChartXAxe extends CommonAxe {
         categoryPercentage?: number;
         barPercentage?: number;
-        time?: TimeScale;
+        distribution?: 'linear' | 'series';
     }
 
     // tslint:disable-next-line no-empty-interface
@@ -570,7 +633,7 @@ declare namespace Chart {
         minUnit?: TimeUnit;
     }
 
-    interface RadialLinearScale {
+    interface RadialLinearScale extends LinearScale {
         lineArc?: boolean;
         angleLines?: AngleLineOptions;
         pointLabels?: PointLabelOptions;
